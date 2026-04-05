@@ -36,45 +36,39 @@ This system is built on a curated corpus of real financial and regulatory docume
 ### 📁 SEC EDGAR — 10-K Annual Filings
 | Bank | Files |
 |---|---|
-| Bank of America (BAC) | 3 years of 10-K filings |
-| JPMorgan Chase (JPM) | 3 years of 10-K filings |
-| Goldman Sachs (GS) | 3 years of 10-K filings |
+| Bank of America (BAC) | `bac-20231231.pdf` |
+| JPMorgan Chase (JPM) | `FORM 10-K: J.P. MORGAN CHASE & CO..pdf` |
+| Goldman Sachs (GS) | `2025-10-k.pdf` |
 
 ### 📁 Reserve Bank of India (RBI)
 | Document | Type |
 |---|---|
-| Monetary Policy Committee Statements | PDF |
-| Master Circulars (KYC / PSL Guidelines) | PDF |
+| MPC Statement | PDF |
+| Master Circular | PDF |
 
 ### 📁 Federal Reserve (FED)
 | Document | Type |
 |---|---|
-| FOMC Policy Statements | TXT |
+| FOMC Policy Statement (Jan 2026) | PDF |
 
 ---
 
 ## 🗂️ Data Folder Structure
 
 ```
-data/
+Data/
 ├── FED/
-│   └── fomc_statement_2023.txt
+│   └── monetary20260128a1.pdf
 ├── RBI/
-│   ├── rbi_mpc_2023.pdf
-│   └── rbi_kyc_circular.pdf
+│   ├── PR6DFA5AD53D2D0414FAAB8D898975C40AA.PDF
+│   └── PR19BD28196D176C4964A1C1E727002EF7AA.PDF
 └── sec-edgar-filings/
     ├── BAC/
-    │   ├── bac_10k_2021.txt
-    │   ├── bac_10k_2022.txt
-    │   └── bac_10k_2023.txt
+    │   └── bac-20231231.pdf
     ├── GS/
-    │   ├── gs_10k_2021.txt
-    │   ├── gs_10k_2022.txt
-    │   └── gs_10k_2023.txt
+    │   └── 2025-10-k.pdf
     └── JPM/
-        ├── jpm_10k_2021.txt
-        ├── jpm_10k_2022.txt
-        └── jpm_10k_2023.txt
+        └── FORM 10-K: J.P. MORGAN CHASE & CO..pdf
 ```
 
 ---
@@ -101,11 +95,15 @@ Answer + Source Citations (e.g. "JPM 10-K 2023, p.45")
 
 ## 📦 Tech Stack
 
-* **Orchestration**: LangChain / LangGraph
-* **Vector DB**: Chroma / Weaviate
-* **Re-ranking**: Cohere (Cross-Encoder)
+* **Orchestration**: LangChain
+* **LLM**: Groq (`llama-3.3-70b-versatile`)
+* **Embeddings**: HuggingFace (`sentence-transformers/all-MiniLM-L6-v2`)
+* **Vector DB**: Chroma
+* **Re-ranking**: Cohere (`rerank-english-v3.0`)
 * **Evaluation**: RAGAS
-* **Search**: BM25 (sparse retrieval)
+* **Search**: BM25 (`rank-bm25`)
+* **Chunking**: tiktoken (token-aware)
+* **Frontend**: Streamlit
 * **CI/CD**: GitHub Actions
 
 ---
@@ -128,12 +126,15 @@ Answer + Source Citations (e.g. "JPM 10-K 2023, p.45")
 
 ### 🔍 Embedding & Storage
 
-* Convert chunks → vector embeddings
-* Tag each chunk with metadata:
+* Convert chunks → vector embeddings using `sentence-transformers/all-MiniLM-L6-v2`
+* Each chunk is tagged with paragraph-level citation metadata:
   * `source` → filename
   * `category` → SEC / RBI / FED
   * `institution` → BAC / JPM / GS / RBI / FED
-* Store in vector DB (Chroma / Weaviate)
+  * `page` → page number (PDF)
+  * `paragraph_index` → paragraph within page
+  * `citation_label` → e.g. `bac-20231231.pdf, page 4, paragraph 2`
+* Store in Chroma vector DB (`chroma_db/`)
 
 ---
 
@@ -184,26 +185,17 @@ Using Cohere:
 
 ---
 
-### 🧾 Prompt Versioning
-
-* Store prompts in **config/versioned files**
-* Enables:
-  * Reproducibility across corpus updates
-  * A/B testing different citation formats
-  * System-level control over grounding strictness
-
----
-
 ## ⚙️ Phase 3 — Evaluation & CI Integration
 
 ### 📊 Golden Dataset
 
-* Curate **50–100 Finance Q&A pairs**, for example:
-  * *"What was JPMorgan's net revenue in FY2023?"*
-  * *"What is the RBI's repo rate as per the latest MPC statement?"*
-  * *"What are the KYC norms mandated by RBI for commercial banks?"*
-  * *"How does Goldman Sachs describe its credit risk exposure?"*
-  * *"What is the Fed's stance on inflation per the latest FOMC statement?"*
+* **10 Finance Q&A pairs** stored in `evaluation/golden_dataset.json`
+* Examples:
+  * *"What did the Fed decide on interest rates in January 2026?"*
+  * *"What is the interest rate paid on reserve balances?"*
+  * *"What are JPMorgan's total assets?"*
+  * *"What is Goldman Sachs's net revenue?"*
+  * *"What are the KYC norms mandated by RBI?"*
 
 ---
 
@@ -244,24 +236,28 @@ For each generated answer:
 ## 📁 Project Structure
 
 ```
-rag-system/
+RAG-Domain/
 │
-├── data/                        # Raw corpus (SEC, RBI, FED)
+├── Data/                        # Raw corpus (SEC, RBI, FED)
 │   ├── FED/
 │   ├── RBI/
 │   └── sec-edgar-filings/
 │       ├── BAC/
 │       ├── GS/
 │       └── JPM/
-├── embeddings/                  # Stored vector DB
-├── ingestion/                   # Chunking + embedding pipeline
-├── retrieval/                   # Hybrid retriever (BM25 + vector)
-├── reranker/                    # Cohere reranking logic
-├── generation/                  # LLM + prompt templates
-├── evaluation/                  # RAGAS scripts + golden dataset
-├── config/                      # Prompt/version configs
-├── ci/                          # GitHub Actions pipeline
-└── app.py                       # Main entry point
+├── chroma_db/                   # Persisted Chroma vector DB
+├── evaluation/
+│   ├── golden_dataset.json      # 10 finance Q&A pairs
+│   └── ragas_eval.py            # RAGAS faithfulness evaluation
+├── .github/
+│   └── workflows/
+│       └── eval.yml             # GitHub Actions CI pipeline
+├── datachunking.py              # Token-aware chunking + paragraph citation
+├── dataimport.py                # SEC filing HTML cleaner + loader
+├── embeddings.py                # Embedding + Chroma vectorstore builder
+├── hybrid_retriever.py          # BM25 + vector search + Cohere rerank
+├── qa_chain.py                  # Citation-enforced LLM QA chain
+└── app.py                       # Streamlit frontend
 ```
 
 ---
@@ -308,6 +304,8 @@ rag-system/
 
 ## 📈 Future Improvements
 
+* Expand golden dataset to 50–100 Q&A pairs
+* Add multi-year 10-K filings for BAC, JPM, GS (2021–2024)
 * Query rewriting for better retrieval on complex financial questions
 * Multi-hop reasoning (e.g. linking RBI policy → bank capital impact)
 * Caching frequent regulatory queries
@@ -315,12 +313,6 @@ rag-system/
 * Feedback loop for continuous corpus updates (new filings, new MPC statements)
 
 ---
-
-✅ Mean Faithfulness : 0.833
-   Threshold         : 0.7
-
-✅ PASSED — faithfulness 0.833 meets threshold
-
 
 ## 🎯 Key Takeaways
 
