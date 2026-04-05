@@ -12,7 +12,7 @@ def _split_paragraphs(text: str) -> List[str]:
     paragraphs = [p.strip() for p in parts if p.strip() and len(p.strip()) >= 40]
     return paragraphs
 
-def load_all_docs(base_dir: str = "data/"):
+def load_all_docs(base_dir: str = "Data/"):
     all_docs = []
     base = Path(base_dir)
 
@@ -146,7 +146,7 @@ def inspect_chunks(chunks: List[Document], n: int = 3):
         
 if __name__ == "__main__":
     # Step 1 — Load
-    docs = load_all_docs("data/")
+    docs = load_all_docs("Data/")
 
     # Step 2 — Chunk
     chunks = chunk_documents(docs)

@@ -99,7 +99,7 @@ def load_vectorstore():
 
 
 def build_bm25_index() -> BM25Index:
-    docs = load_all_docs("data/")
+    docs = load_all_docs("Data/")
     chunks = chunk_documents(docs)
     return BM25Index(chunks)
 
