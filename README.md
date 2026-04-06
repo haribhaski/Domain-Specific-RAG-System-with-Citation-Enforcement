@@ -175,7 +175,6 @@ source venv/bin/activate
 pip install -r requirements.txt  # if present
 ```
 
-If you do not have a `requirements.txt`, install your current stack manually and run:
 
 ```bash
 streamlit run app.py
