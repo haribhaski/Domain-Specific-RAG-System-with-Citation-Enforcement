@@ -4,7 +4,7 @@ A production-ready, domain-specific finance chatbot that combines Retrieval-Augm
 
 ## Overview
 
-This project answers finance and banking questions using your curated corpus (SEC filings, RBI documents, and Fed statements) and always grounds responses in retrieved evidence.
+This project answers finance and banking related questions using your curated corpus (SEC filings, RBI documents, and Fed statements) and always grounds responses in retrieved evidence.
 
 Core outcomes:
 - Domain-focused Q&A with source citations
